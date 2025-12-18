@@ -1,0 +1,11 @@
+pandas
+openpyxl
+google-adk
+mcp
+fastmcp
+python-dotenv
+litellm
+fastapi
+uvicorn
+pydantic
+mcp[cli]
