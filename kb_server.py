@@ -1,5 +1,5 @@
 import sqlite3
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 # Initialize FastMCP server
 mcp = FastMCP("HealthKnowledgeBase")
@@ -12,74 +12,156 @@ def query_db(query, params=()):
         cursor.execute(query, params)
         return [dict(row) for row in cursor.fetchall()]
 
-@mcp.tool()
-def get_top_doctors(location, speciality: str = None) -> str:
-    """Finds the top 3 doctors. Optionally filter by speciality OR location."""
-    query = "SELECT name, designation, speciality, location, fee FROM doctors"
-    if speciality:
-        query += " WHERE speciality LIKE ?"
-        results = query_db(query + " ORDER BY fee ASC LIMIT 3", (f"%{speciality}%",))
-    elif location:
-        query += " WHERE location LIKE ?"
-        results = query_db(query + " ORDER BY fee ASC LIMIT 3", (f"%{location}%",))
-    else:
-        results = query_db(query + " ORDER BY fee ASC LIMIT 3")
-    return str(results)
-
-@mcp.tool()
-def get_top_exercises(muscle_group: str = None) -> str:
-    """Returns top 3 exercises based on rating. Filter by muscle group."""
-    query = "SELECT exercise_name, muscle, equipment, rating FROM exercises"
-    if muscle_group:
-        query += " WHERE muscle LIKE ?"
-        results = query_db(query + " ORDER BY rating DESC LIMIT 3", (f"%{muscle_group}%",))
-    else:
-        results = query_db(query + " ORDER BY rating DESC LIMIT 3")
-    return str(results)
-
-@mcp.tool()
-def get_top_foods(goal: str = "weight_loss") -> str:
-    """Returns top 3 foods for 'weight_loss' or 'weight_gain'."""
-    sort_col = "weight_loss_rating" if goal == "weight_loss" else "weight_gain_rating"
-    query = f"SELECT food_item, category, calories, protein FROM food ORDER BY {sort_col} DESC LIMIT 3"
-    results = query_db(query)
-    return str(results)
-
-@mcp.tool()
-def calculate_sleep_debt(actual_sleep_hours: float, required_hours: float = 8.0) -> str:
-    """Calculates sleep debt for a single day and provides a recovery tip."""
-    debt = required_hours - actual_sleep_hours
-    status = "Credit" if debt <= 0 else "Debt"
+# @mcp.tool()
+# def search_top_doctors(city: str, speciality: str, limit: int = 3):
+#     """
+#     Finds the top N doctors in a city based on speciality.
+#     Results are sorted by fee (lowest first) to provide the 'best' recommendations.
+#     """
+#     conn = sqlite3.connect(DB_PATH)
+#     cursor = conn.cursor()
     
-    advice = "Great job!" if debt <= 0 else "Try a 20-min power nap today."
-    return f"Status: {status} | Difference: {abs(debt)} hours. Advice: {advice}"
+#     # Using ORDER BY fee ASC and LIMIT to get the top 3
+#     query = """
+#         SELECT name, designation, speciality, location, fee 
+#         FROM doctors 
+#         WHERE location LIKE ? AND speciality LIKE ?
+#         ORDER BY fee ASC
+#         LIMIT ?
+#     """
+    
+#     cursor.execute(query, (f"%{city}%", f"%{speciality}%", limit))
+#     rows = cursor.fetchall()
+#     conn.close()
+    
+#     if not rows:
+#         return "No doctors found matching those criteria."
+    
+#     return [
+#         {"name": r[0], "designation": r[1], "speciality": r[2], "location": r[3], "fee": r[4]} 
+#         for r in rows
+#     ]
 
-@mcp.tool()
-def get_sleep_hygiene_tips(issue: str = "general") -> str:
-    """Provides science-based tips for specific sleep issues like 'insomnia' or 'restlessness'."""
-    tips = {
-        "insomnia": "Avoid screens 1hr before bed; try magnesium-rich foods.",
-        "restlessness": "Keep your room at 18°C (65°F); use a weighted blanket.",
-        "general": "Stick to a consistent wake-up time even on weekends."
-    }
-    return tips.get(issue.lower(), tips["general"])
+# @mcp.tool()
+# def get_top_exercises(muscle_group: str = None, limit: int = 3):
+#     """
+#     Finds the top N exercises based on rating.
+#     Can be filtered by muscle group.
+#     Results are sorted by rating (highest first).
+#     """
+#     conn = sqlite3.connect(DB_PATH)
+#     cursor = conn.cursor()
+
+#     query = """
+#         SELECT exercise_name, muscle, equipment, rating
+#         FROM exercises
+#     """
+
+#     params = []
+
+#     if muscle_group:
+#         query += " WHERE muscle LIKE ?"
+#         params.append(f"%{muscle_group}%")
+
+#     query += " ORDER BY rating DESC LIMIT ?"
+#     params.append(limit)
+
+#     cursor.execute(query, tuple(params))
+#     rows = cursor.fetchall()
+#     conn.close()
+
+#     if not rows:
+#         return "No exercises found matching those criteria."
+
+#     return [
+#         {
+#             "exercise_name": r[0],
+#             "muscle": r[1],
+#             "equipment": r[2],
+#             "rating": r[3]
+#         }
+#         for r in rows
+#     ]
 
 @mcp.tool()
 def calculate_bmi(weight_kg: float, height_cm: float) -> str:
-    """Calculates BMI and returns the health category."""
+    """Calculates BMI and returns category with the specific goal keyword."""
+    if height_cm <= 0:
+        return "Error: Height must be positive."
+    
     height_m = height_cm / 100
     bmi = round(weight_kg / (height_m**2), 1)
     
     if bmi < 18.5:
-        category = "Underweight (Goal: weight_gain)"
+        goal = "weight_gain"
+        cat = "Underweight"
     elif 18.5 <= bmi < 25:
-        category = "Healthy weight (Goal: weight_loss for maintenance)"
-    elif 25 <= bmi < 30:
-        category = "Overweight (Goal: weight_loss)"
+        goal = "weight_loss" # Defaulting to loss/maintenance
+        cat = "Healthy weight"
     else:
-        category = "Obese (Goal: weight_loss)"
+        goal = "weight_loss"
+        cat = "Overweight/Obese"
         
-    return f"Your BMI is {bmi} ({category})."
+    return f"BMI: {bmi} ({cat}). Recommended Goal: {goal}"
+
+@mcp.tool()
+def get_top_foods(goal: str) -> str:
+    """Queries the local sqlite3 DB for top foods based on weight goal."""
+    try:
+        conn = sqlite3.connect(DB_PATH) # Ensure DB_PATH is defined in your environment
+        cursor = conn.cursor()
+        
+        # Protect against injection by strictly mapping the sort column
+        sort_col = "weight_loss_rating" if goal == "weight_loss" else "weight_gain_rating"
+        
+        query = f"""
+            SELECT food_item, category, calories, protein 
+            FROM food 
+            ORDER BY {sort_col} DESC 
+            LIMIT 3
+        """
+        
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        conn.close()
+        
+        if not rows:
+            return "No food data found for this goal."
+            
+        # Returning a formatted string the Agent can easily read
+        return str([{"food": r[0], "type": r[1], "kcal": r[2], "protein": r[3]} for r in rows])
+    except Exception as e:
+        return f"Database Error: {str(e)}"
+
+# @mcp.tool()
+# def calculate_cumulative_sleep_debt(avg_actual_hours: float, days: int = 1, required_hours: float = 8.0):
+#     """
+#     Calculates total sleep debt over a period and provides a recovery strategy.
+#     """
+#     daily_debt = required_hours - avg_actual_hours
+#     total_debt = daily_debt * days
+    
+#     # Logic based on the "Sleep Pressure" model
+#     if total_debt <= 0:
+#         status, severity = "Sustained Baseline", "None"
+#         guidance = "You are in a 'Sleep Surplus.' Maintain your current rhythm to protect cognitive performance."
+#     elif total_debt <= 4:
+#         status, severity = "Acute Sleep Debt", "Low"
+#         guidance = "Manageable. A 20-minute power nap today and an extra 30 minutes of sleep tonight will clear this."
+#     elif total_debt <= 10:
+#         status, severity = "Cumulative Fatigue", "Moderate"
+#         guidance = "You are likely experiencing 'micro-sleeps' or brain fog. Prioritize a consistent wake-up time and shift bedtime 45 mins earlier for 3 nights."
+#     else:
+#         status, severity = "Chronic Sleep Deprivation", "High"
+#         guidance = "Critical debt level. Do not attempt to 'catch up' all at once (this causes social jetlag). Aim for a consistent +1 hour per night over the next week."
+
+#     return {
+#         "status": status,
+#         "severity": severity,
+#         "total_debt_hours": round(total_debt, 2),
+#         "recovery_estimate_days": max(1, round(total_debt / 1.5)), # Estimates days to recover safely
+#         "guidance": guidance
+#     }
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    mcp.run()
