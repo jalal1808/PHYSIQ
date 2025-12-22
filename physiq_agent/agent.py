@@ -27,14 +27,14 @@ root_agent = Agent(
     tools=[mcp_tools]
 )
 
-# sleep_guardian = Agent(
+# sleepGuardian = Agent(
 #     name="SleepGuardian",
 #     model="groq/llama-3.1-8b-instant",
 #     instruction="sleep",
 #     tools=[mcp_tools]
 # )
 
-# fitness_coach = Agent(
+# FitnessCoach = Agent(
 #     name="FitnessCoach",
 #     model="groq/llama-3.1-8b-instant", 
 #     instruction="fitness",

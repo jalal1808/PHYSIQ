@@ -4,13 +4,26 @@ from pathlib import Path
 
 DB_PATH = "knowledge_base.db"
 
-# Excel file paths
+#Excel file paths
 DOCTORS_XLSX = "data/doctors.xlsx"
 EXERCISES_XLSX = "data/exercises.xlsx"
 FOOD_XLSX = "data/food.xlsx"
+SLEEP_KNOWLEDGE_XLSX = "data/sleep_knowledge.xlsx"
 
 def create_tables(conn):
     cursor = conn.cursor()
+    
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS sleep_knowledge (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic TEXT,
+        intent TEXT,
+        question TEXT,
+        answer TEXT,
+        category TEXT,
+        tags TEXT
+    )
+    """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS doctors (
@@ -69,6 +82,26 @@ def load_food(conn):
     ]
     df.to_sql("food", conn, if_exists="append", index=False)
 
+def load_sleep_knowledge(conn):
+    df = pd.read_excel(SLEEP_KNOWLEDGE_XLSX)
+
+    df.columns = [
+        "topic",
+        "intent",
+        "question",
+        "answer",
+        "category",
+        "tags"
+    ]
+
+    df.to_sql(
+        "sleep_knowledge",
+        conn,
+        if_exists="append",
+        index=False
+    )
+
+
 def main():
     conn = sqlite3.connect(DB_PATH)
 
@@ -76,6 +109,7 @@ def main():
     load_doctors(conn)
     load_exercises(conn)
     load_food(conn)
+    load_sleep_knowledge(conn)
 
     conn.close()
     print("Excel data successfully loaded into SQLite")
