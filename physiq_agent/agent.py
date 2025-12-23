@@ -20,49 +20,47 @@ mcp_tools = McpToolset(
     )
 )
 
-root_agent = Agent(
+nutritionist = Agent(
     name="Nutritionist",
-    model="groq/llama-3.1-8b-instant", 
+    model="gemini-2.5-flash", 
     instruction="food",
     tools=[mcp_tools]
 )
 
-# sleepGuardian = Agent(
-#     name="SleepGuardian",
-#     model="groq/llama-3.1-8b-instant",
-#     instruction="sleep",
-#     tools=[mcp_tools]
-# )
+sleep_guardian = Agent(
+    name="SleepGuardian",
+    model="gemini-2.5-flash",
+    instruction="sleep",
+    tools=[mcp_tools]
+)
 
-# FitnessCoach = Agent(
-#     name="FitnessCoach",
-#     model="groq/llama-3.1-8b-instant", 
-#     instruction="fitness",
-#     tools=[mcp_tools]
-# )
+fitness_coach = Agent(
+    name="FitnessCoach",
+    model="gemini-2.5-flash", 
+    instruction="fitness",
+    tools=[mcp_tools]
+)
 
-# MedicalAssistant = Agent(
-#     name="MedicalAssistant",
-#     model="groq/llama-3.1-8b-instant",
-#     instruction="medical_assistant",
-#     tools=[mcp_tools]
-# )
+medical_assistant = Agent(
+    name="MedicalAssistant",
+    model="gemini-2.5-flash",
+    instruction="medical_assistant",
+    tools=[mcp_tools]
+)
 
-# coordinator = Agent(
-#     name="HealthSystem",
-#     model="gemini-2.5-flash",
-#     instruction="""Route the user to the correct expert based on their need:
-#     - Tired/Sleep/Circadian -> SleepGuardian
-#     - Workouts/Muscle/Exercise -> FitnessCoach
-#     - Doctors/Clinics/Specialists/Health issues -> HealthSpecialist
-#     - Diet/BMI/Food/Weight goals -> Nutritionist
-    
-#     If the user's request is vague, ask clarifying questions.""",
-#     sub_agents=[sleep_guardian, fitness_coach, health_specialist, nutritionist]
-# )
+coordinator = Agent(
+    name="HealthSystem",
+    model="gemini-2.5-flash",
+    instruction="coordination",
+    sub_agents=[sleep_guardian, fitness_coach, medical_assistant, nutritionist]
+)
 
-# root_agent = SequentialAgent(
-#     name="PhysiqAgent",
-#     description="An agent thatRoute the user to the correct expert based on their need",
-#     sub_agents=[coordinator],
-# )
+root_agent = SequentialAgent(
+    name="PhysiqAgent",
+    description=(
+        "PhysiqAgent is the primary entry point for users. "
+        "It delegates all user requests to the HealthSystem coordinator, "
+        "which routes them to the appropriate health specialist agent."
+    ),
+    sub_agents=[coordinator],
+)
