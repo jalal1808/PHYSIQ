@@ -8,8 +8,9 @@ from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from mcp import StdioServerParameters
 
 from prompt import prompt
+from google.adk.apps import App
 
-os.environ['GROQ_API_KEY']
+# os.environ['GROQ_API_KEY']
 
 mcp_tools = McpToolset(
     connection_params=StdioConnectionParams(
@@ -23,35 +24,35 @@ mcp_tools = McpToolset(
 nutritionist = Agent(
     name="Nutritionist",
     model="gemini-2.5-flash", 
-    instruction="food",
+    instruction=prompt.food,
     tools=[mcp_tools]
 )
 
 sleep_guardian = Agent(
     name="SleepGuardian",
     model="gemini-2.5-flash",
-    instruction="sleep",
+    instruction=prompt.sleep,
     tools=[mcp_tools]
 )
 
 fitness_coach = Agent(
     name="FitnessCoach",
     model="gemini-2.5-flash", 
-    instruction="fitness",
+    instruction=prompt.fitness,
     tools=[mcp_tools]
 )
 
 medical_assistant = Agent(
     name="MedicalAssistant",
     model="gemini-2.5-flash",
-    instruction="medical_assistant",
+    instruction=prompt.medical_assistant,
     tools=[mcp_tools]
 )
 
 coordinator = Agent(
     name="HealthSystem",
     model="gemini-2.5-flash",
-    instruction="coordination",
+    instruction=prompt.coordination,
     sub_agents=[sleep_guardian, fitness_coach, medical_assistant, nutritionist]
 )
 
@@ -63,4 +64,10 @@ root_agent = SequentialAgent(
         "which routes them to the appropriate health specialist agent."
     ),
     sub_agents=[coordinator],
+)
+
+app = App(
+    name="PhysiqApp",
+    root_agent=root_agent,
+    
 )
