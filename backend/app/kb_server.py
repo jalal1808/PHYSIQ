@@ -1,9 +1,24 @@
+import os
 import sqlite3
 from fastmcp import FastMCP
+import traceback
+import sys
+
+def excepthook(type, value, tb):
+    traceback.print_exception(type, value, tb)
+    sys.exit(1)
+
+sys.excepthook = excepthook
+
 
 ##Initialize FastMCP server
 mcp = FastMCP("HealthKnowledgeBase")
-DB_PATH = "knowledge_base.db"
+show_banner=False
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "knowledge_base.db")
+
+
 
 def query_db(query, params=()):
     with sqlite3.connect(DB_PATH) as conn:
@@ -208,4 +223,4 @@ def get_sleep_knowledge(query: str) -> str:
         return f"Database Error: {str(e)}"
 
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(transport="stdio")
