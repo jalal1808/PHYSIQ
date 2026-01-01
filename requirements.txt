@@ -9,3 +9,8 @@ fastapi
 uvicorn
 pydantic
 mcp[cli]
+google-generativeai
+sqlalchemy
+python-jose
+passlib[bcrypt]
+python-multipart

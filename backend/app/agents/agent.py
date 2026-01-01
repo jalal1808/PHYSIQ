@@ -6,12 +6,13 @@ from google.adk.agents import Agent, SequentialAgent
 from google.adk.models.lite_llm import LiteLlm
 
 from app.prompt import prompt
+# from app.mcp_server import mcp_tools
 
-# from google.adk.apps import App
+from google.adk.apps import App
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioConnectionParams
 
 KB_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "kb_server.py")
+    os.path.join(os.path.dirname(__file__), "..", "tools.py")
 )
 
 mcp_tools = MCPToolset(
@@ -26,7 +27,7 @@ mcp_tools = MCPToolset(
 
 os.environ['GROQ_API_KEY']
 
-llm_model = "groq/llama-3.1-8b-instant" #gemini-2.5-flash
+llm_model = "gemini-2.5-flash" #groq/llama-3.1-8b-instant
 
 nutritionist = Agent(
     name="Nutritionist",

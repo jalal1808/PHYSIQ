@@ -3,6 +3,7 @@ import sqlite3
 from fastmcp import FastMCP
 import traceback
 import sys
+# from app.mcp_server import mcp, DB_PATH
 
 def excepthook(type, value, tb):
     traceback.print_exception(type, value, tb)
@@ -17,8 +18,6 @@ show_banner=False
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "knowledge_base.db")
-
-
 
 def query_db(query, params=()):
     with sqlite3.connect(DB_PATH) as conn:
