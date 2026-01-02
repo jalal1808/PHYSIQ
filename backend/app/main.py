@@ -56,7 +56,7 @@ async def chat(
     user: User = Depends(current_user),
     db: Session = Depends(get_db)
 ):
-    # find existing chat session
+    # Get or create chat session
     chat_session = (
         db.query(ChatSession)
         .filter(ChatSession.user_id == user.id)
@@ -70,7 +70,6 @@ async def chat(
             session_id=chat_session.adk_session_id
         )
 
-    #  IMPORTANT: session may be None
         if session is None:
             session = await session_service.create_session(
                 app_name="PhysiqApp",
@@ -83,24 +82,38 @@ async def chat(
             app_name="PhysiqApp",
             user_id=str(user.id)
         )
-        db.add(ChatSession(
+        chat_session = ChatSession(
             user_id=user.id,
             adk_session_id=session.id
-        ))
+        )
+        db.add(chat_session)
         db.commit()
+        db.refresh(chat_session)
 
-    profile_context = f"""
+    # Build context CONDITIONALLY
+    base_context = f"""
 User Profile:
-Weight: {user.weight_kg if user.weight_kg else 'N/A'} kg
-Height: {user.height_cm if user.height_cm else 'N/A'} cm
-Age: {user.age if user.age else 'N/A'}
-Gender: {user.gender if user.gender else 'N/A'}
-"""
+Weight: {user.weight_kg or 'N/A'}
+Height: {user.height_cm or 'N/A'}
+Age: {user.age or 'N/A'}
+Gender: {user.gender or 'N/A'}
+""".strip()
 
+    if chat_session.conversation_summary:
+        memory_context = f"""
+{base_context}
+
+Conversation Memory:
+{chat_session.conversation_summary}
+""".strip()
+    else:
+        memory_context = base_context
+
+    # Send user message
     user_message = genai_types.Content(
         role="user",
         parts=[genai_types.Part(
-        text=profile_context + "\n\n" + request.message
+            text=memory_context + "\n\nUser says: " + request.message
         )]
     )
 
@@ -111,9 +124,37 @@ Gender: {user.gender if user.gender else 'N/A'}
         session_id=session.id,
         new_message=user_message
     ):
-        if event.is_final_response():
+        if event.is_final_response() and event.content and event.content.parts:
             final_response = event.content.parts[0].text
             break
+
+    # Update conversation summary ONLY after response
+    summary_prompt = f"""
+Summarize the following conversation briefly so it can be used as memory later.
+
+User: {request.message}
+Assistant: {final_response}
+"""
+
+    summary_message = genai_types.Content(
+        role="user",
+        parts=[genai_types.Part(text=summary_prompt)]
+    )
+
+    summary_text = ""
+
+    async for event in runner.run_async(
+        user_id=str(user.id),
+        session_id=session.id,
+        new_message=summary_message
+    ):
+        if event.is_final_response() and event.content and event.content.parts:
+            summary_text = event.content.parts[0].text
+            break
+
+    if summary_text:
+        chat_session.conversation_summary = summary_text
+        db.commit()
 
     return ChatResponse(
         response=final_response,

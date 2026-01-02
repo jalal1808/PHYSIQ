@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
- 
+
 
 class SignupRequest(BaseModel):
     email: EmailStr
@@ -14,6 +14,7 @@ class LoginRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+
 
 class ChatResponse(BaseModel):
     response: str

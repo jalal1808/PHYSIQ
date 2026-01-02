@@ -1,5 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
+from datetime import datetime, timezone
 from .db import Base
 
 class User(Base):
@@ -16,12 +16,10 @@ class User(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
-
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    adk_session_id = Column(String, unique=True)
-
-    created_at = Column(DateTime, default=datetime.utcnow)
+    adk_session_id = Column(String)
+    conversation_summary = Column(Text, nullable=True)
