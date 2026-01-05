@@ -1,5 +1,5 @@
 from db import engine, Base
-from models import User, ChatSession
+from models import User, ChatSession, TokenBlacklist
 
 def init_db():
     Base.metadata.create_all(bind=engine)

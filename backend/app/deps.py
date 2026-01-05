@@ -19,6 +19,12 @@ def current_user(
     token: str = Depends(oauth2),
     db: Session = Depends(get_db)
 ):
+    # Check if token is blacklisted
+    from .models import TokenBlacklist
+
+    if db.query(TokenBlacklist).filter(TokenBlacklist.token == token).first():
+        raise HTTPException(status_code=401, detail="Token has been revoked")
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         uid = payload.get("user_id")
@@ -30,3 +36,4 @@ def current_user(
         raise HTTPException(status_code=401)
 
     return user
+

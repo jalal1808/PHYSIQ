@@ -57,66 +57,52 @@ def search_top_doctors(city: str, speciality: str, limit: int = 3):
     ]
 
 @mcp.tool()
-def get_top_exercises(muscle_group: str = None, limit: int = 3):
+def get_top_exercises(target_muscle: str, equipment: str, limit: int = 5) -> str:
     """
-    Finds the top N exercises based on rating.
-    Can be filtered by muscle group.
-    Results are sorted by rating (highest first).
+    Finds top-rated exercises for a specific muscle group
+    using the specified equipment.
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     query = """
-        SELECT exercise_name, muscle, equipment, rating
+        SELECT exercise_name
         FROM exercises
+        WHERE LOWER(muscle) = LOWER(?)
+          AND LOWER(equipment) LIKE LOWER(?)
+        ORDER BY rating DESC
+        LIMIT ?
     """
 
-    params = []
+    cursor.execute(
+        query,
+        (target_muscle, f"%{equipment}%", limit)
+    )
 
-    if muscle_group:
-        query += " WHERE muscle LIKE ?"
-        params.append(f"%{muscle_group}%")
-
-    query += " ORDER BY rating DESC LIMIT ?"
-    params.append(limit)
-
-    cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
     conn.close()
 
     if not rows:
-        return "No exercises found matching those criteria."
+        return f"No exercises found for {target_muscle} using {equipment}."
 
-    return [
-        {
-            "exercise_name": r[0],
-            "muscle": r[1],
-            "equipment": r[2],
-            "rating": r[3]
-        }
-        for r in rows
-    ]
+    exercise_names = [r[0] for r in rows]
+
+    return (
+        f"Here are some {equipment} exercises for {target_muscle}: "
+        f"{', '.join(exercise_names)}."
+    )
 
 @mcp.tool()
 def calculate_bmi(weight_kg: float, height_cm: float) -> str:
-    """Calculates BMI and returns category with the specific goal keyword."""
-    if height_cm <= 0:
-        return "Error: Height must be positive."
-    
+    """Calculates Body Mass Index (BMI) and provides a general category."""
     height_m = height_cm / 100
-    bmi = round(weight_kg / (height_m**2), 1)
-    
-    if bmi < 18.5:
-        goal = "weight_gain"
-        cat = "Underweight"
-    elif 18.5 <= bmi < 25:
-        goal = "weight_loss" # Defaulting to loss/maintenance
-        cat = "Healthy weight"
-    else:
-        goal = "weight_loss"
-        cat = "Overweight/Obese"
-        
-    return f"BMI: {bmi} ({cat}). Recommended Goal: {goal}"
+    bmi = round(weight_kg / (height_m ** 2), 1)
+    category = "Unknown"
+    if bmi < 18.5: category = "Underweight"
+    elif 18.5 <= bmi < 24.9: category = "Normal weight"
+    elif 25 <= bmi < 29.9: category = "Overweight"
+    else: category = "Obese"
+    return f"A weight of {weight_kg}kg and height of {height_cm}cm results in a BMI of {bmi}, which is in the '{category}' category."
 
 @mcp.tool()
 def get_top_foods(goal: str) -> str:

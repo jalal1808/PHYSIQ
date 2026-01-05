@@ -23,3 +23,10 @@ class ChatSession(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     adk_session_id = Column(String)
     conversation_summary = Column(Text, nullable=True)
+    
+class TokenBlacklist(Base):
+    __tablename__ = "token_blacklist"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

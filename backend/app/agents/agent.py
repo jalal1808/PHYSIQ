@@ -27,7 +27,7 @@ mcp_tools = MCPToolset(
 
 os.environ['GROQ_API_KEY']
 
-llm_model = "gemini-2.5-flash" #groq/llama-3.1-8b-instant
+llm_model = LiteLlm(model = "groq/llama-3.1-8b-instant") #gemini-2.5-flash
 
 nutritionist = Agent(
     name="Nutritionist",
