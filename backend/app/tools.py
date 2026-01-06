@@ -57,16 +57,20 @@ def search_top_doctors(city: str, speciality: str, limit: int = 3):
     ]
 
 @mcp.tool()
-def get_top_exercises(target_muscle: str, equipment: str, limit: int = 5) -> str:
+def get_top_exercises(
+    target_muscle: str,
+    equipment: str,
+    limit: int = 5
+) -> list:
     """
-    Finds top-rated exercises for a specific muscle group
-    using the specified equipment.
+    Returns top-rated exercises for a muscle group and equipment.
     """
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     query = """
-        SELECT exercise_name
+        SELECT exercise_name, equipment, rating
         FROM exercises
         WHERE LOWER(muscle) = LOWER(?)
           AND LOWER(equipment) LIKE LOWER(?)
@@ -83,14 +87,17 @@ def get_top_exercises(target_muscle: str, equipment: str, limit: int = 5) -> str
     conn.close()
 
     if not rows:
-        return f"No exercises found for {target_muscle} using {equipment}."
+        return []
 
-    exercise_names = [r[0] for r in rows]
+    return [
+        {
+            "exercise_name": r[0],
+            "equipment": r[1],
+            "rating": r[2]
+        }
+        for r in rows
+    ]
 
-    return (
-        f"Here are some {equipment} exercises for {target_muscle}: "
-        f"{', '.join(exercise_names)}."
-    )
 
 @mcp.tool()
 def calculate_bmi(weight_kg: float, height_cm: float) -> str:
@@ -108,10 +115,9 @@ def calculate_bmi(weight_kg: float, height_cm: float) -> str:
 def get_top_foods(goal: str) -> str:
     """Queries the local sqlite3 DB for top foods based on weight goal."""
     try:
-        conn = sqlite3.connect(DB_PATH) # Ensure DB_PATH is defined in your environment
+        conn = sqlite3.connect(DB_PATH) 
         cursor = conn.cursor()
-        
-        # Protect against injection by strictly mapping the sort column
+
         sort_col = "weight_loss_rating" if goal == "weight_loss" else "weight_gain_rating"
         
         query = f"""
@@ -120,7 +126,6 @@ def get_top_foods(goal: str) -> str:
             ORDER BY {sort_col} DESC 
             LIMIT 3
         """
-        
         cursor.execute(query)
         rows = cursor.fetchall()
         conn.close()
@@ -128,7 +133,6 @@ def get_top_foods(goal: str) -> str:
         if not rows:
             return "No food data found for this goal."
             
-        # Returning a formatted string the Agent can easily read
         return str([{"food": r[0], "type": r[1], "kcal": r[2], "protein": r[3]} for r in rows])
     except Exception as e:
         return f"Database Error: {str(e)}"
@@ -141,7 +145,6 @@ def calculate_cumulative_sleep_debt(avg_actual_hours: float, days: int = 1, requ
     daily_debt = required_hours - avg_actual_hours
     total_debt = daily_debt * days
     
-    # Logic based on the "Sleep Pressure" model
     if total_debt <= 0:
         status, severity = "Sustained Baseline", "None"
         guidance = "You are in a 'Sleep Surplus.' Maintain your current rhythm to protect cognitive performance."
@@ -159,7 +162,7 @@ def calculate_cumulative_sleep_debt(avg_actual_hours: float, days: int = 1, requ
         "status": status,
         "severity": severity,
         "total_debt_hours": round(total_debt, 2),
-        "recovery_estimate_days": max(1, round(total_debt / 1.5)), # Estimates days to recover safely
+        "recovery_estimate_days": max(1, round(total_debt / 1.5)),
         "guidance": guidance
     }
     
@@ -170,7 +173,7 @@ def get_sleep_knowledge(query: str) -> str:
     based on a user query.
     """
     try:
-        conn = sqlite3.connect(DB_PATH)  # Ensure DB_PATH is defined
+        conn = sqlite3.connect(DB_PATH)  
         cursor = conn.cursor()
 
         sql_query = """
@@ -192,8 +195,6 @@ def get_sleep_knowledge(query: str) -> str:
 
         if not rows:
             return "No sleep-related knowledge found for this query."
-
-        # Agent-friendly structured response
         return str([
             {
                 "matched_question": r[0],

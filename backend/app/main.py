@@ -23,9 +23,6 @@ from .deps import current_user, get_db, oauth2
 logging.getLogger("google.adk").setLevel(logging.ERROR)
 
 app = FastAPI(title="Physiq AI")
-
-# ------------------ ADK SETUP ------------------
-
 session_service = InMemorySessionService()
 
 runner = Runner(
@@ -33,8 +30,6 @@ runner = Runner(
     app_name="PhysiqApp",
     session_service=session_service,
 )
-
-# ------------------ AUTH ------------------
 
 @app.post("/auth/signup")
 def signup(data: SignupRequest, db: Session = Depends(get_db)):
@@ -54,7 +49,6 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
 
     return {"message": "User created successfully"}
 
-
 @app.post("/auth/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
@@ -65,7 +59,6 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         "access_token": create_token(user.id),
         "token_type": "bearer",
     }
-
 
 @app.post("/auth/logout")
 def logout(
@@ -80,9 +73,6 @@ def logout(
 
     return {"message": "Logged out successfully"}
 
-
-# ------------------ CHAT HELPERS ------------------
-
 def build_profile_context(user: User) -> str:
     return (
         "User profile (for internal context only):\n"
@@ -92,12 +82,8 @@ def build_profile_context(user: User) -> str:
         f"- Gender: {user.gender or 'N/A'}"
     )
 
-
-def lightweight_summary(user_msg: str) -> str:
-    return f"User last asked about: {user_msg[:120]}"
-
-
-# ------------------ CHAT ------------------
+def lightweight_summary(text: str, max_chars: int = 120) -> str:
+    return text.strip()[:max_chars]
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
@@ -105,15 +91,12 @@ async def chat(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    # --------- DB session record ---------
 
     chat_session = (
         db.query(ChatSession)
         .filter(ChatSession.user_id == user.id)
         .first()
     )
-
-    # --------- ADK session handling ---------
 
     session = None
 
@@ -124,7 +107,6 @@ async def chat(
             session_id=chat_session.adk_session_id,
         )
 
-    # 🔥 FIX: recreate session if missing
     if not chat_session or session is None:
         session = await session_service.create_session(
             app_name="PhysiqApp",
@@ -156,8 +138,6 @@ async def chat(
         ):
             pass
 
-    # --------- user message ---------
-
     user_message = genai_types.Content(
         role="user",
         parts=[genai_types.Part(text=request.message)],
@@ -177,8 +157,6 @@ async def chat(
     if not final_response:
         raise HTTPException(500, "No response generated")
 
-    # --------- lightweight memory ---------
-
     chat_session.conversation_summary = lightweight_summary(request.message)
     db.commit()
 
@@ -186,9 +164,6 @@ async def chat(
         response=final_response,
         session_id=session.id,
     )
-
-
-# ------------------ PROFILE UPDATE ------------------
 
 @app.patch("/user/profile")
 def update_profile(

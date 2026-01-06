@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from .db import SessionLocal
 from .models import User
 from .auth import SECRET_KEY, ALGORITHM
+from .models import TokenBlacklist
 
 oauth2 = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -20,8 +21,6 @@ def current_user(
     db: Session = Depends(get_db)
 ):
     # Check if token is blacklisted
-    from .models import TokenBlacklist
-
     if db.query(TokenBlacklist).filter(TokenBlacklist.token == token).first():
         raise HTTPException(status_code=401, detail="Token has been revoked")
 
