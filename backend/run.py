@@ -16,4 +16,4 @@ frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "fronte
 app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
 
 if __name__ == "__main__":
-    uvicorn.run("run:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("run:app", host="0.0.0.0", port=1000, reload=False)
